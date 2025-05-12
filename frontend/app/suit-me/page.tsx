@@ -8,7 +8,7 @@ import { ProcessedFrame } from '../types';
 import { analyzeSkinToneUpload } from '../services/api';
 
 
-export default function Home() {
+export default function SuitMe() {
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [processedFrame, setProcessedFrame] = useState<ProcessedFrame | null>(null);
   const [skinToneAnalysis, setSkinToneAnalysis] = useState<any>(null); 
