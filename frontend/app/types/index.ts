@@ -50,3 +50,41 @@ export interface MeasurementResultExport {
         scaleFactor: number;
     };
 }
+
+export interface OutfitItem {
+  id: number;
+  type: string;
+  display_name: string;
+  color: string;
+  image_url: string;
+  price: number;
+}
+
+export interface Outfit {
+  id: number;
+  topwear: OutfitItem;
+  bottomwear: OutfitItem;
+  footwear: OutfitItem;
+}
+
+export interface RecommendationResponse {
+  outfits: Outfit[];
+}
+
+export interface RecommendationRequest {
+  skin_tone_hex: string;
+  gender: string;
+  usage: string[];
+  footwear_preference: string;
+}
+
+export interface SkinTone {
+  id: string;
+  hex: string;
+  name: string;
+}
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
