@@ -1,38 +1,38 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Roboto } from "next/font/google";
 import "./globals.css";
+import { Inter } from "next/font/google";
+import { AuthProvider } from "./context/AuthContext";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import AuthButton from "./components/AuthButton";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
-const roboto = Roboto({
-  variable: "--font-roboto",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "SUITS Singapore | New Collection Online",
-  description: "Smart Unified Intelligent Technology for Style",
+export const metadata = {
+  title: "SUITS Singapore",
+  description: "Your personal suit recommendation system",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} antialiased`}
-      >
-        {children}
+      <body className={inter.className}>
+        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+          <AuthProvider>
+            <header className="flex justify-between items-center p-4 border-gray-200">
+              <h1 className="text-2xl font-bold text-blue-800 tracking-tight">
+                SUITS
+              </h1>
+              <AuthButton />
+            </header>
+            <ProtectedRoute>{children}</ProtectedRoute>
+          </AuthProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );
