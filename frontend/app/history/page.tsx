@@ -51,7 +51,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-8 bg-white rounded-2xl shadow-2xl mt-12 border border-gray-200">
+    <div className="max-w-5xl mx-auto p-8 bg-white rounded-2xl shadow-2xl mt-12 border border-gray-200 mb-10">
       <h2 className="text-3xl font-extrabold mb-8 text-center text-blue-700 tracking-tight drop-shadow">
         Your Preferences History
       </h2>
@@ -68,6 +68,7 @@ export default function HistoryPage() {
                 <th className="px-6 py-3 text-left font-semibold">User</th>
                 <th className="px-6 py-3 text-left font-semibold">Gender</th>
                 <th className="px-6 py-3 text-left font-semibold">Occasion</th>
+                <th className="px-6 py-3 text-left font-semibold">Footwear</th>
                 <th className="px-6 py-3 rounded-tr-xl text-left font-semibold">
                   Skin Tone
                 </th>
@@ -90,6 +91,9 @@ export default function HistoryPage() {
                   <td className="px-6 py-3 capitalize">{pref.gender || "-"}</td>
                   <td className="px-6 py-3 capitalize">
                     {pref.occasion || "-"}
+                  </td>
+                  <td className="px-6 py-3 capitalize">
+                    {pref.footwear || "-"}
                   </td>
                   <td className="px-6 py-3">
                     {user.skin_tone ? (
