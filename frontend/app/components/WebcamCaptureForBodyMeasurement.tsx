@@ -1,21 +1,18 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { processBodyFrame } from '../services/api';
-import { BodyFrame } from '../types';
+import { processBodyFrame, BodyMeasurement } from '../services/api';
 
 interface WebcamCaptureForBodyMeasurementProps {
-    onFrameProcessed: (frame: BodyFrame) => void;
+    onFrameProcessed: (frame: any) => void; // Using any for flexibility with your existing code
     isCapturing: boolean;
-    isCalibrating: boolean;
     isMeasuring: boolean;
 }
 
 const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementProps> = ({ 
   onFrameProcessed, 
   isCapturing,
-  isCalibrating,
-  isMeasuring
+  isMeasuring,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -24,8 +21,10 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
   const processingRef = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
   const requestIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const calibrationCountRef = useRef<number>(0);
-  const requiredSamplesRef = useRef<number>(30);
+  const [measurementProgress, setMeasurementProgress] = useState(0);
+  const measurementDurationMs = 5000; // 5 seconds
+  const startTimeRef = useRef<number>(0);
+  const measurementIntervalMs = 500; // Check for measurements every 500ms
 
   // Start webcam stream
   useEffect(() => {
@@ -77,9 +76,6 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
       }
     }
     
-    // Reset calibration count when starting/stopping capture
-    calibrationCountRef.current = 0;
-    
     // Cleanup function
     return () => {
       if (stream) {
@@ -88,7 +84,7 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
     };
   }, [isCapturing, stream]);
 
-  // Process frames when isCapturing is true and calibrating or measuring
+  // Process frames when isCapturing is true and measuring
   useEffect(() => {
     // Clear any existing interval
     if (requestIntervalRef.current) {
@@ -96,8 +92,8 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
       requestIntervalRef.current = null;
     }
     
-    // Only process frames if we're capturing and either calibrating or measuring
-    if (!isCapturing || (!isCalibrating && !isMeasuring) || !videoRef.current || !canvasRef.current) {
+    // Only process frames if we're capturing and measuring
+    if (!isCapturing || !isMeasuring || !videoRef.current || !canvasRef.current) {
       // Cancel any existing animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -106,12 +102,11 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
       return;
     }
     
-    console.log(`Frame processing activated - Calibrating: ${isCalibrating}, Measuring: ${isMeasuring}`);
+    console.log(`Frame processing activated - Measuring: ${isMeasuring}`);
     
-    // Reset calibration count when starting calibration
-    if (isCalibrating) {
-      calibrationCountRef.current = 0;
-    }
+    // Reset measurement progress and start time when beginning measurement
+    setMeasurementProgress(0);
+    startTimeRef.current = Date.now();
     
     const captureAndProcessFrame = async () => {
       if (processingRef.current) {
@@ -168,138 +163,73 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
           return;
         }
         
+        // Calculate current progress
+        const elapsedTime = Date.now() - startTimeRef.current;
+        const currentProgress = Math.min(100, Math.floor((elapsedTime / measurementDurationMs) * 100));
+        setMeasurementProgress(currentProgress);
+        
         // Send to backend for processing
         try {
           // Log the request being sent
           console.log('Sending frame to backend for processing...');
           
-          // For debugging, let's add a fallback mock response
-          let result;
-          try {
-            result = await processBodyFrame(frameData);
-            console.log('Received response from backend:', result);
-            
-            // Important: Make sure we're properly handling the API response format
-            if (!result.calibrationStatus && isCalibrating) {
-              // If the API response doesn't include calibration status but we're calibrating,
-              // add the current calibration count to ensure UI updates
-              console.log('Adding calibration status to result');
-              calibrationCountRef.current += 1; // Increment the count
-              result.calibrationStatus = {
-                samples: calibrationCountRef.current,
-                required: 30,
-                isCalibrated: calibrationCountRef.current >= 30
-              };
-            }
-            
-            // Critical: If in measuring state, ensure the API response includes measurements
-            // This is the key area that might be causing the program to get stuck
-            if (isMeasuring && !result.measurements) {
-              console.log('Measuring mode but no measurements in API response. Adding mock measurements.');
-              // Add mock measurements to ensure the UI transitions to results
-              result.measurements = {
-                shoulderWidth: 42.5,
-                torsoLength: 55.3,
-                legLength: 75.8,
-                totalHeight: 170.2,
-                scaleFactor: 0.235
-              };
-            }
-          } catch (apiError) {
-            console.error('Backend API error:', apiError);
-            // If API fails, use a mock response to see if the UI is working
-            console.log('Using mock response for debugging');
-            
-            // Create a mock response based on whether we're calibrating or measuring
-            if (isCalibrating) {
-              // Increment calibration count
-              calibrationCountRef.current += 1;
-              
-              // Mock calibration response
-              const samples = Math.min(requiredSamplesRef.current, calibrationCountRef.current);
-              const isCalibrated = samples >= requiredSamplesRef.current;
-              
-              result = {
-                hasPose: true,
-                visualizationImage: frameData,
-                calibrationStatus: {
-                  samples: samples,
-                  required: requiredSamplesRef.current,
-                  isCalibrated: isCalibrated
-                }
-              };
-              
-              // If we've collected enough samples, we can stop the process
-              if (isCalibrated && requestIntervalRef.current) {
-                clearInterval(requestIntervalRef.current);
-                requestIntervalRef.current = null;
-              }
-            } else if (isMeasuring) {
-              // Mock measurement response - CRITICAL for ensuring the UI transitions
-              console.log('Creating mock measurement result');
-              result = {
-                hasPose: true,
-                visualizationImage: frameData,
-                measurements: {
-                  shoulderWidth: 42.5,
-                  torsoLength: 55.3,
-                  legLength: 75.8,
-                  totalHeight: 170.2,
-                  scaleFactor: 0.235
-                }
-              };
-              
-              // Ensure we signal that this is a valid measurement
-              onFrameProcessed(result);
-              
-              // For measuring, we only need to do it once
-              processingRef.current = false;
-              return;
-            } else {
-              result = {
-                hasPose: true,
-                visualizationImage: frameData
-              };
-            }
-          }
+          const result = await processBodyFrame(frameData);
+          console.log('Received response from backend:', result);
           
-          // Process the result and update calibration count if needed
-          if (result.calibrationStatus) {
-            // Update the calibration count from the response
-            calibrationCountRef.current = result.calibrationStatus.samples;
-            console.log(`Calibration status updated: ${calibrationCountRef.current}/${result.calibrationStatus.required}`);
+          // Convert the response to match expected format in your app
+          if ('message' in result) {
+            // Still waiting for stable pose
+            const formattedResult = {
+              hasPose: true,
+              visualizationImage: frameData,
+              statusMessage: result.message,
+              measurementProgress: currentProgress
+            };
             
-            // Ensure we're updating the state that renders in the UI
-            if (isCalibrating) {
-              // Force immediate UI update by directly setting the samples collected state
-              onFrameProcessed({
-                ...result,
-                // Ensure the calibration status is properly included in the processed frame
-                calibrationStatus: {
-                  samples: result.calibrationStatus.samples,
-                  required: result.calibrationStatus.required,
-                  isCalibrated: result.calibrationStatus.isCalibrated
-                }
-              });
-            }
+            onFrameProcessed(formattedResult);
+          } else {
+            // We have measurements from the API
+            // Convert the snake_case response to your existing format
+            const measurements = {
+              shoulderWidth: result.shoulder_width,
+              torsoLength: result.torso_length,
+              leftLegLength: result.left_leg_length,
+              rightLegLength: result.right_leg_length,
+              unit: result.unit,
+              scaleFactor: result.unit === 'cm' ? 1.0 : null,
+              sizeCategories: result.size_categories
+            };
             
-            // If calibration is complete, stop the interval
-            if (result.calibrationStatus.isCalibrated && requestIntervalRef.current) {
-              console.log("Calibration complete, stopping interval");
+            // Format for your existing UI
+            const formattedResult = {
+              hasPose: true,
+              visualizationImage: result.visualization_image || frameData,
+              measurements: measurements,
+              measurementProgress: 100
+            };
+            
+            onFrameProcessed(formattedResult);
+            
+            // If we got measurements, we can stop
+            if (requestIntervalRef.current) {
+              console.log("Measurements obtained, stopping interval");
               clearInterval(requestIntervalRef.current);
               requestIntervalRef.current = null;
             }
           }
           
-          // If we have measurements and we're measuring, stop after getting the result
-          if (result.measurements && isMeasuring && requestIntervalRef.current) {
-            clearInterval(requestIntervalRef.current);
-            requestIntervalRef.current = null;
-          }
+        } catch (apiError) {
+          console.error('Backend API error:', apiError);
           
-          onFrameProcessed(result);
-        } catch (err) {
-          console.error('Error in frame processing flow:', err);
+          // If API fails, use a mock response for debugging
+          const mockResult = {
+            hasPose: true,
+            visualizationImage: frameData,
+            error: "Failed to get measurements from backend",
+            measurementProgress: currentProgress
+          };
+          
+          onFrameProcessed(mockResult);
         } finally {
           processingRef.current = false;
         }
@@ -309,59 +239,28 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
       }
     };
     
-    // Instead of using requestAnimationFrame which runs constantly,
-    // use an interval to pace the requests (e.g., every 500ms during calibration, once for measurement)
-    if (isCalibrating) {
-      console.log("Starting calibration with interval");
-      // Reset the calibration count
-      calibrationCountRef.current = 0;
+    console.log("Starting measurement process");
+    
+    // For measurement, try multiple times during the 5-second period
+    requestIntervalRef.current = setInterval(() => {
+      const elapsedTime = Date.now() - startTimeRef.current;
       
-      // For calibration, capture frames at regular intervals until we have enough samples
-      // Make it a bit faster to ensure we get enough samples
-      requestIntervalRef.current = setInterval(() => {
-        console.log(`Calibration frame capture - Count: ${calibrationCountRef.current}/${requiredSamplesRef.current}`);
-        captureAndProcessFrame();
-        
-        // Check if we've reached the required number of samples
-        if (calibrationCountRef.current >= requiredSamplesRef.current) {
-          console.log("Reached required calibration samples, clearing interval");
-          if (requestIntervalRef.current) {
-            clearInterval(requestIntervalRef.current);
-            requestIntervalRef.current = null;
-          }
+      // Update progress
+      const currentProgress = Math.min(100, Math.floor((elapsedTime / measurementDurationMs) * 100));
+      setMeasurementProgress(currentProgress);
+      
+      // Process frame
+      captureAndProcessFrame();
+      
+      // Check if we've reached the end of the measurement period
+      if (elapsedTime >= measurementDurationMs) {
+        console.log("Measurement period complete");
+        if (requestIntervalRef.current) {
+          clearInterval(requestIntervalRef.current);
+          requestIntervalRef.current = null;
         }
-      }, 300); // Faster interval for more reliable calibration
-    } else if (isMeasuring) {
-      console.log("Starting measurement");
-      
-      // Ensure we have a clean measurement
-      processingRef.current = false;
-      
-      // For measurement, we'll try multiple times to ensure we get a valid measurement
-      let attemptCount = 0;
-      const maxAttempts = 5;
-      
-      const attemptMeasurement = () => {
-        if (attemptCount >= maxAttempts) {
-          console.log(`Max measurement attempts (${maxAttempts}) reached`);
-          return;
-        }
-        
-        attemptCount++;
-        console.log(`Measurement attempt ${attemptCount}/${maxAttempts}`);
-        
-        // Capture and process a frame for measurement
-        captureAndProcessFrame();
-        
-        // Schedule next attempt if we haven't maxed out
-        if (attemptCount < maxAttempts) {
-          setTimeout(attemptMeasurement, 1000); // Try again in 1 second
-        }
-      };
-      
-      // Start the measurement attempts
-      attemptMeasurement();
-    }
+      }
+    }, measurementIntervalMs);
     
     // Cleanup function
     return () => {
@@ -374,7 +273,7 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
         animationFrameRef.current = null;
       }
     };
-  }, [isCapturing, isCalibrating, isMeasuring, onFrameProcessed]);
+  }, [isCapturing, isMeasuring, onFrameProcessed]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -392,21 +291,6 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
       }
     };
   }, [stream]);
-
-  // We need to use state instead of refs for the UI display
-  const [displayCalibrationCount, setDisplayCalibrationCount] = useState(0);
-  
-  // Update the display count whenever the calibration count ref changes
-  useEffect(() => {
-    // Create an interval to keep the display updated with the current ref value
-    const updateInterval = setInterval(() => {
-      if (isCalibrating) {
-        setDisplayCalibrationCount(calibrationCountRef.current);
-      }
-    }, 100); // Update frequently
-    
-    return () => clearInterval(updateInterval);
-  }, [isCalibrating]);
   
   return (
     <div className="relative">
@@ -424,14 +308,24 @@ const WebcamCaptureForBodyMeasurement: React.FC<WebcamCaptureForBodyMeasurementP
       />
       <canvas ref={canvasRef} className="hidden" /> {/* Hidden canvas for processing */}
       
-      {/* Debug info - use state instead of ref for display */}
+      {/* Status information */}
       <div className="mt-2 text-xs text-gray-500">
         Status: {isCapturing ? (
-          isCalibrating ? 
-            `Calibrating ${displayCalibrationCount}/${requiredSamplesRef.current}` : 
-            (isMeasuring ? 'Measuring' : 'Ready')
+          isMeasuring ? 
+            `Measuring body dimensions... Please stand still (${measurementProgress}%)` : 
+            'Ready'
         ) : 'Inactive'}
       </div>
+      
+      {/* Progress bar */}
+      {isMeasuring && isCapturing && (
+        <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+          <div 
+            className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+            style={{ width: `${measurementProgress}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 };
