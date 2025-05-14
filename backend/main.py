@@ -37,6 +37,7 @@ app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(segmentation_router, prefix="/api", tags=["Segmentation"])
 app.include_router(skin_tone_router, prefix="/api", tags=["Skin Tone"])
 app.include_router(body_measurement_router, prefix="/api", tags=["Body Measurement"])
+app.include_router (recommendation_router, prefix="/api", tags=["Recommendation"])
 
 # Root endpoint for basic API information
 @app.get("/")

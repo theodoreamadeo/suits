@@ -2,19 +2,18 @@ from fastapi import APIRouter, HTTPException, Depends, status, Body
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 import logging
 import cv2
 import numpy as np
 import base64
-import tempfile
 import os
 from datetime import datetime
 import json
 import re
 
 # Import the body measurement class
-from services.ai.body_measurement import BodyMeasurement
+from services.ai.measurement import BodyMeasurement
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -26,23 +25,35 @@ router = APIRouter()
 bodyMeasure = BodyMeasurement()
 
 # Data models
-class CalibrationRequest(BaseModel):
-    userHeight: float
-    shoulderWidth: float
-    cameraDistance: float = 2.0
-
 class FrameRequest(BaseModel):
     frame: str  # Base64 encoded image
 
+class SetScaleFactorRequest(BaseModel):
+    scale_factor: float  # Scale factor in cm/px
+
+class MeasurementResponse(BaseModel):
+    shoulder_width: Optional[float]
+    torso_length: Optional[float]
+    hip_width: Optional[float]
+    left_leg_length: Optional[float]
+    right_leg_length: Optional[float]
+    unit: str
+    timestamp: float
+    size_categories: Optional[Dict[str, str]] = None
+    visualization_image: Optional[str] = None
+
 class MeasurementSaveRequest(BaseModel):
-    shoulderWidth: float
-    torsoLength: float
-    legLength: float
-    totalHeight: float
-    scaleFactor: float
+    shoulder_width: float
+    torso_length: float
+    hip_width: float
+    left_leg_length: float
+    right_leg_length: float
+    unit: str
+    timestamp: float
+    size_categories: Optional[Dict[str, str]] = None
     notes: Optional[str] = None
 
-# helper function for decoding base64 images
+# Helper function for decoding base64 images
 def decode_base64_image(base64_img):
     """
     Decode base64 image to OpenCV format with enhanced error handling
@@ -100,37 +111,37 @@ def decode_base64_image(base64_img):
         logger.error(f"Error decoding base64 image: {str(e)}")
         return None
 
-# Routes
-@router.post("/body-measurement/calibrate")
-async def calibrate(data: CalibrationRequest):
-    """Initialize calibration with user's actual measurements"""
+# Helper function to encode an image to base64
+def encode_image_to_base64(image):
+    """
+    Encode OpenCV image to base64 string
+    """
     try:
-        # Log the received calibration data
-        logger.info(f"Received calibration request: {data}")
-        
-        # Validate input
-        if data.userHeight <= 0 or data.shoulderWidth <= 0:
-            raise HTTPException(
-                status_code=400, 
-                detail="Height and shoulder width must be positive values"
-            )
+        if image is None:
+            logger.error("Cannot encode None image")
+            return None
             
-        # Initialize the body measurement service with calibration data
-        result = bodyMeasure.initialize_calibration(
-            user_height_cm=data.userHeight,
-            shoulder_width_cm=data.shoulderWidth,
-            camera_distance_m=data.cameraDistance
-        )
+        # Encode image to jpg format
+        success, buffer = cv2.imencode('.jpg', image)
+        if not success:
+            logger.error("Failed to encode image")
+            return None
+            
+        # Convert to base64
+        encoded_image = base64.b64encode(buffer).decode('utf-8')
+        return f"data:image/jpeg;base64,{encoded_image}"
         
-        logger.info(f"Calibration result: {result}")
-        return result
     except Exception as e:
-        logger.error(f"Error in calibration initialization: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error encoding image to base64: {str(e)}")
+        return None
 
-@router.post("/body-measurement/process-body-frame")
+# Routes
+@router.post("/body-measurement/process-body-frame", response_model=MeasurementResponse)
 async def process_frame(request: FrameRequest):
-    """Process a single video frame for body measurements"""
+    """
+    Process a single video frame for body measurements.
+    Returns measurements, sizing info, and visualization.
+    """
     try:
         frame_length = len(request.frame) if request.frame else 0
         logger.info(f"Received frame data with length: {frame_length}")
@@ -150,23 +161,60 @@ async def process_frame(request: FrameRequest):
         
         # Process the frame with the body measurement service
         logger.info(f"Processing frame with shape: {image.shape}")
-        result = bodyMeasure.process_frame(image)
+        measurements = bodyMeasure.process_frame(image)
         
-        # Log the result structure
-        logger.info(f"Processed frame. Result keys: {result.keys()}")
-        if 'visualizationImage' in result:
-            vis_length = len(result['visualizationImage']) if result['visualizationImage'] else 0
-            logger.info(f"Visualization image length: {vis_length}")
+        # If no measurements were obtained (pose not stable)
+        if measurements is None:
+            logger.info("No stable measurements obtained yet")
+            return JSONResponse(
+                status_code=202,  # Accepted but not complete
+                content={"message": "Pose not stable or detection incomplete"}
+            )
         
-        return result
+        # Log the measurement keys
+        logger.info(f"Measurements obtained: {measurements.keys()}")
+        
+        # Encode the processed image to base64 for response
+        visualization_image = encode_image_to_base64(image)
+        
+        # Create response with measurements and visualization
+        response_data = {
+            **measurements,  # Include all measurements from the dictionary
+            "visualization_image": visualization_image
+        }
+        
+        return response_data
     
     except Exception as e:
         logger.error(f"Error processing frame: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/body-measurement/latest")
+async def get_latest_measurements():
+    """
+    Get the latest measurements without processing a new frame
+    """
+    try:
+        # Get the latest stored measurements
+        measurements = bodyMeasure.get_latest_measurements()
+        
+        if not measurements:
+            return JSONResponse(
+                status_code=404,
+                content={"message": "No measurements available"}
+            )
+            
+        return measurements
+        
+    except Exception as e:
+        logger.error(f"Error getting latest measurements: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
         
 @router.post("/body-measurement/save")
 async def save_measurement(data: MeasurementSaveRequest):
-    """Save a measurement to storage"""
+    """
+    Save a measurement to storage
+    """
     try:
         # Log the received measurement data
         logger.info(f"Saving measurement data: {data}")
