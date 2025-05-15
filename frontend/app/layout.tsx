@@ -24,10 +24,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} p-5`}>
+      <body className={`${inter.className} `}>
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
           <AuthProvider>
-            <header className="flex justify-between items-center p-4 border-gray-200">
+            <header className="flex justify-between items-center p-6 border-gray-200">
               <Link
                 href="/"
                 className="text-2xl font-bold text-blue-800 tracking-tight"
