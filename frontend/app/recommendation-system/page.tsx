@@ -20,8 +20,9 @@ export default function RecommendationSystem() {
   const [selectedOutfit, setSelectedOutfit] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  
   useEffect(() => {
-    const fetchLatestPreferenceAndRecommend = async () => {
+    const fetchRecommendations = async () => {
       if (!token || !user) {
         setError("Not authenticated.");
         setIsLoading(false);
@@ -29,27 +30,50 @@ export default function RecommendationSystem() {
       }
       setIsLoading(true);
       setError(null);
+      
       try {
-        const response = await fetch(
-          "http://localhost:8000/api/auth/preferences",
-          {
-            headers: { Authorization: `Bearer ${token}` },
+        // Check if there's a selected preference in sessionStorage
+        const storedPreference = sessionStorage.getItem('selectedPreference');
+        let preferences;
+        
+        if (storedPreference) {
+          // Use the selected preference from history page
+          const selectedPref = JSON.parse(storedPreference);
+          preferences = {
+            skin_tone_hex: selectedPref.skin_tone || user.skin_tone || "",
+            gender: selectedPref.gender === "male" ? "Men" : "Women",
+            usage: [toCamelCase(selectedPref.occasion || "")],
+            footwear_preference: selectedPref.footwear || "",
+          };
+          
+          // Clear the selected preference from sessionStorage to avoid using it unintentionally next time
+          sessionStorage.removeItem('selectedPreference');
+        } else {
+          // If no selected preference, fetch the latest preference
+          const response = await fetch(
+            "http://localhost:8000/api/auth/preferences",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          if (!response.ok) throw new Error("Failed to fetch preferences");
+          const prefs = await response.json();
+          if (!prefs || prefs.length === 0) {
+            setError("No preferences found.");
+            setIsLoading(false);
+            return;
           }
-        );
-        if (!response.ok) throw new Error("Failed to fetch preferences");
-        const prefs = await response.json();
-        if (!prefs || prefs.length === 0) {
-          setError("No preferences found.");
-          setIsLoading(false);
-          return;
+          const latest = prefs[0];
+          preferences = {
+            skin_tone_hex: user.skin_tone || "",
+            gender: latest.gender === "male" ? "Men" : "Women",
+            usage: [toCamelCase(latest.occasion || "")],
+            footwear_preference: latest.footwear || "",
+          };
         }
-        const latest = prefs[0];
-        const preferences = {
-          skin_tone_hex: user.skin_tone || "",
-          gender: latest.gender === "male" ? "Men" : "Women",
-          usage: [toCamelCase(latest.occasion || "")],
-          footwear_preference: latest.footwear || "",
-        };
+        
+        // Get recommendations based on preferences
+        console.log("Fetching recommendations with preferences:", preferences);
         const data = await getOutfitRecommendations(preferences);
         setRecommendations(data.outfits || []);
         setSelectedOutfit(
@@ -64,7 +88,8 @@ export default function RecommendationSystem() {
         setIsLoading(false);
       }
     };
-    fetchLatestPreferenceAndRecommend();
+    
+    fetchRecommendations();
   }, [token, user]);
 
   // Calculate total price for selected outfit

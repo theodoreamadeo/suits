@@ -117,11 +117,11 @@ export default function ConfirmPage() {
             size={75} 
             className={`mb-4 text-[#47534d] ${isGenerating ? 'animate-pulse' : 'animate-bounce'}`} 
           />
-          <div className={`absolute -top-2 -right-2 h-4 w-4 rounded-full ${
+          {/* <div className={`absolute top-4 right-2 h-4 w-4 rounded-full ${
             arduinoStatus === 'connected' ? 'bg-green-500 animate-ping' : 
             arduinoStatus === 'disconnected' ? 'bg-yellow-500' : 
             arduinoStatus === 'error' ? 'bg-red-500' : 'bg-gray-500'
-          }`}></div>
+          }`}></div> */}
         </div>
         
         <h1 className="text-3xl md:text-5xl font-extrabold text-[#747b6e] mb-4 text-center flex flex-wrap items-center justify-center gap-2">
