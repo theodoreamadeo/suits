@@ -84,7 +84,7 @@ export default function SuitMe() {
 
   const handleNext = async () => {
     await refreshUser();
-    router.push("/preference-form");
+    router.push("/");
   };
 
   return (

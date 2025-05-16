@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { getOutfitRecommendations } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { ArrowBigRightDash } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 function toCamelCase(str: string) {
   return str
@@ -18,7 +19,7 @@ export default function RecommendationSystem() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [selectedOutfit, setSelectedOutfit] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
-
+  const router = useRouter();
   useEffect(() => {
     const fetchLatestPreferenceAndRecommend = async () => {
       if (!token || !user) {
@@ -177,12 +178,17 @@ export default function RecommendationSystem() {
           </div>
         )}
       </div>
-      <div className="flex flex-col items-center justify-center ml-15 ">
+      <div
+        className="flex flex-col items-center justify-center ml-15 "
+        onClick={() => {
+          router.push("/confirm");
+        }}
+      >
         <ArrowBigRightDash
           width={150}
           height={150}
           color="#90977a"
-          className="hover:scale-105"
+          className="hover:scale-105 animate-bounce"
         />
         <p className="text-xs font-bold">Click here to confirm the option!</p>
       </div>
