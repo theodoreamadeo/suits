@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.api.routes.segmentation_routes import router as segmentation_router
 from backend.api.routes.skin_tone_routes import router as skin_tone_router
 from backend.api.routes.body_measurement_routes import router as body_measurement_router
+from backend.api.routes.recommendation_routes_correct import router as recommendation_router
 from backend.api.auth import router as auth_router
 import logging
 
@@ -37,7 +38,7 @@ app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(segmentation_router, prefix="/api", tags=["Segmentation"])
 app.include_router(skin_tone_router, prefix="/api", tags=["Skin Tone"])
 app.include_router(body_measurement_router, prefix="/api", tags=["Body Measurement"])
-# app.include_router(recommendation_router, prefix="/api", tags=["Recommendation"])  # Removed or comment out since not defined
+app.include_router(recommendation_router, prefix="/api", tags=["Recommendation"])  # Removed or comment out since not defined
 
 # Root endpoint for basic API information
 @app.get("/")

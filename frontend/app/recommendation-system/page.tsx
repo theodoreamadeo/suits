@@ -1,118 +1,218 @@
-'use client';
+"use client";
 // src/app/page.tsx
-import React, { useState } from 'react';
-import PreferenceForm from '../components/PreferenceForm';
-import OutfitRecommendations from '../components/OutfitRecommendations';
-import { RecommendationRequest, RecommendationResponse, Outfit } from '../types';
-import { getOutfitRecommendations } from '../services/api';
+import React, { useEffect, useState } from "react";
+import OutfitRecommendations from "../components/OutfitRecommendations";
+import {
+  RecommendationRequest,
+  RecommendationResponse,
+  Outfit,
+} from "../types";
+import { getOutfitRecommendations } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
-export default function Home() {
+function toCamelCase(str: string) {
+  return str
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+export default function RecommendationSystem() {
+  const { token, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
-  const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [selectedOutfit, setSelectedOutfit] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (preferences: RecommendationRequest) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await getOutfitRecommendations(preferences);
-      setRecommendations(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get recommendations');
-      console.error('Error fetching recommendations:', err);
-    } finally {
-      setIsLoading(false);
-    }
+  useEffect(() => {
+    const fetchLatestPreferenceAndRecommend = async () => {
+      if (!token || !user) {
+        setError("Not authenticated.");
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          "http://localhost:8000/api/auth/preferences",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (!response.ok) throw new Error("Failed to fetch preferences");
+        const prefs = await response.json();
+        if (!prefs || prefs.length === 0) {
+          setError("No preferences found.");
+          setIsLoading(false);
+          return;
+        }
+        const latest = prefs[0];
+        // NOTE: The recommendation API now uses GET with query parameters
+        const preferences = {
+          skin_tone_hex: user.skin_tone || "",
+          gender: latest.gender === "male" ? "Men" : "Women",
+          usage: [toCamelCase(latest.occasion || "")],
+          footwear_preference: latest.footwear || "",
+        };
+        const data = await getOutfitRecommendations(preferences);
+        setRecommendations(data.outfits || []);
+        setSelectedOutfit(
+          data.outfits && data.outfits.length > 0 ? data.outfits[0] : null
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to get recommendations"
+        );
+        console.error("Error fetching recommendations:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchLatestPreferenceAndRecommend();
+  }, [token, user]);
+
+  const handleSwitch = (type: string, item: any) => {
+    if (!selectedOutfit) return;
+    setSelectedOutfit({
+      ...selectedOutfit,
+      [type]: item,
+    });
   };
 
-  const handleSelectOutfit = (outfit: Outfit) => {
-    setSelectedOutfit(outfit);
-    // Here you could implement additional logic like:
-    // - Adding to cart
-    // - Saving to favorites
-    // - Proceeding to checkout
-    console.log('Selected outfit:', outfit);
-  };
+  // Calculate total price for selected outfit
+  const totalPrice = selectedOutfit
+    ? (selectedOutfit.topwear?.price || 0) +
+      (selectedOutfit.bottomwear?.price || 0) +
+      (selectedOutfit.footwear?.price || 0)
+    : 0;
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto mt-12 p-8 bg-white rounded-lg shadow-md">
+        <h2 className="text-2xl font-bold mb-6 text-center text-red-700">
+          Error occurred
+        </h2>
+        <pre className="bg-red-50 p-4 rounded text-red-800 overflow-x-auto">
+          {error}
+        </pre>
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-center mb-8">Fashion Recommendation System</h1>
-        
-        <div className="max-w-4xl mx-auto">
-          {/* Success alert when outfit is selected */}
-          {selectedOutfit && (
-            <div className="mb-6 p-4 bg-green-100 border border-green-400 rounded-md">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold">Outfit Selected!</h3>
-                  <p>You've selected an outfit with:</p>
-                  <ul className="list-disc pl-5 mt-2">
-                    <li>{selectedOutfit.topwear.display_name}</li>
-                    <li>{selectedOutfit.bottomwear.display_name}</li>
-                    <li>{selectedOutfit.footwear.display_name}</li>
-                  </ul>
-                  <p className="mt-2">
-                    Total Price: ${(
-                      selectedOutfit.topwear.price +
-                      selectedOutfit.bottomwear.price +
-                      selectedOutfit.footwear.price
-                    ).toFixed(2)}
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setSelectedOutfit(null)}
-                  className="text-green-700 hover:text-green-900"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Error alert */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-100 border border-red-400 rounded-md">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-red-700">Error</h3>
-                  <p>{error}</p>
-                </div>
-                <button 
-                  onClick={() => setError(null)}
-                  className="text-red-700 hover:text-red-900"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Preference Form */}
-          <PreferenceForm onSubmit={handleSubmit} isLoading={isLoading} />
-          
-          {/* Loading indicator */}
-          {isLoading && (
-            <div className="flex justify-center items-center my-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
-              <span className="ml-3 text-lg">Loading recommendations...</span>
-            </div>
-          )}
-          
-          {/* Outfit Recommendations */}
-          {!isLoading && recommendations && (
-            <OutfitRecommendations
-              recommendations={recommendations}
-              onSelectOutfit={handleSelectOutfit}
+    <div className="flex flex-col md:flex-row gap-8 p-8 min-h-screen bg-gray-50">
+      {/* Left: Selected Outfit */}
+      <div className="flex flex-col items-center justify-center w-full md:w-1/3 bg-white rounded-xl shadow p-6 mb-8 md:mb-0 md:sticky md:top-8 h-fit">
+        {selectedOutfit ? (
+          <>
+            <img
+              src={selectedOutfit.topwear.image_url}
+              alt="Topwear"
+              className="w-40 h-40 object-contain mb-4"
             />
-          )}
-        </div>
+            <img
+              src={selectedOutfit.bottomwear.image_url}
+              alt="Bottomwear"
+              className="w-40 h-40 object-contain mb-4"
+            />
+            <img
+              src={selectedOutfit.footwear.image_url}
+              alt="Footwear"
+              className="w-40 h-40 object-contain"
+            />
+            <div className="mt-6 text-lg font-bold text-blue-700">
+              Total: ${totalPrice.toFixed(2)}
+            </div>
+          </>
+        ) : (
+          <div className="text-gray-400">No outfit selected</div>
+        )}
       </div>
-    </main>
+
+      {/* Right: Outfit Options */}
+      <div className="flex-1 flex flex-col gap-8 max-h-[80vh] overflow-y-auto pr-2">
+        {isLoading && <div className="text-center">Loading...</div>}
+        {!isLoading &&
+          recommendations &&
+          recommendations.length > 0 &&
+          recommendations.map((outfit, idx) => (
+            <div
+              key={outfit.id}
+              className={
+                "bg-gray-100 rounded-xl p-6 flex flex-col gap-2 shadow transition-all " +
+                (selectedOutfit &&
+                outfit.topwear.id === selectedOutfit.topwear.id &&
+                outfit.bottomwear.id === selectedOutfit.bottomwear.id &&
+                outfit.footwear.id === selectedOutfit.footwear.id
+                  ? "border-4 border-blue-500 bg-blue-50"
+                  : "")
+              }
+            >
+              <div className="font-bold mb-2">OPTION {idx + 1}</div>
+              <div className="flex items-end gap-8">
+                {/* Topwear */}
+                <div className="flex flex-col items-center">
+                  <img
+                    src={outfit.topwear.image_url}
+                    alt="Topwear"
+                    className="w-20 h-20 object-contain mb-2"
+                  />
+                  <div className="text-sm font-semibold">
+                    ${outfit.topwear.price.toFixed(2)}
+                  </div>
+                  {/* <button
+                    className="bg-gray-300 rounded px-4 py-1 mt-1"
+                    onClick={() => handleSwitch("topwear", outfit.topwear)}
+                  >
+                    switch
+                  </button> */}
+                </div>
+                {/* Bottomwear */}
+                <div className="flex flex-col items-center">
+                  <img
+                    src={outfit.bottomwear.image_url}
+                    alt="Bottomwear"
+                    className="w-20 h-20 object-contain mb-2"
+                  />
+                  <div className="text-sm font-semibold">
+                    ${outfit.bottomwear.price.toFixed(2)}
+                  </div>
+                  {/* <button
+                    className="bg-gray-300 rounded px-4 py-1 mt-1"
+                    onClick={() =>
+                      handleSwitch("bottomwear", outfit.bottomwear)
+                    }
+                  >
+                    switch
+                  </button> */}
+                </div>
+                {/* Footwear */}
+                <div className="flex flex-col items-center">
+                  <img
+                    src={outfit.footwear.image_url}
+                    alt="Footwear"
+                    className="w-20 h-20 object-contain mb-2"
+                  />
+                  <div className="text-sm font-semibold">
+                    ${outfit.footwear.price.toFixed(2)}
+                  </div>
+                  {/* <button
+                    className="bg-gray-300 rounded px-4 py-1 mt-1"
+                    onClick={() => handleSwitch("footwear", outfit.footwear)}
+                  >
+                    switch
+                  </button> */}
+                </div>
+              </div>
+            </div>
+          ))}
+        {!isLoading && (!recommendations || recommendations.length === 0) && (
+          <div className="text-center text-gray-500">
+            No recommendations found.
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

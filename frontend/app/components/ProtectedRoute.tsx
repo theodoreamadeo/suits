@@ -15,6 +15,11 @@ export default function ProtectedRoute({
   useEffect(() => {
     // Allow landing page (/) for everyone
     if (pathname === "/") return;
+    // If logged in but no skin_tone, redirect to /suit-me
+    if (user && !user.skin_tone && pathname !== "/suit-me") {
+      router.replace("/suit-me");
+      return;
+    }
     // Redirect if not logged in and not loading
     if (!loading && !user) {
       router.replace("/");

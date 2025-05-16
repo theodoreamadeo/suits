@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useRouter } from "next/navigation";
 
 const GENDERS = [
   { value: "male", label: "Male" },
@@ -32,6 +33,7 @@ const FOOTWEAR_OPTIONS = [
 
 export default function PreferencesForm() {
   const { user, updatePreferences } = useAuth();
+  const router = useRouter();
   const [gender, setGender] = useState(user?.preferences?.gender || "");
   const [occasion, setOccasion] = useState(user?.preferences?.occasion || "");
   const [footwear, setFootwear] = useState(user?.preferences?.footwear || "");
@@ -46,6 +48,8 @@ export default function PreferencesForm() {
     try {
       await updatePreferences(gender, occasion, footwear);
       setSuccess(true);
+      console.log("Pushing to recommendation system");
+      router.push("/recommendation-system");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to update preferences"
@@ -58,9 +62,7 @@ export default function PreferencesForm() {
   }
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6">Your Preferences</h2>
-
+    <div className="max-w-md mx-auto p-6 rounded-lg shadow-md">
       {error && (
         <div className="mb-4 p-2 text-sm text-red-600 bg-red-100 rounded">
           {error}
@@ -81,10 +83,10 @@ export default function PreferencesForm() {
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value)}
-            className="w-full rounded-md border-gray-300 border-2 p-1 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="w-full rounded-md border-gray-300 border-2 p-1 shadow-sm focus:border-[#B6BAAB] "
             required
           >
-            <option value="">Select gender</option>
+            <option value="">Select Gender</option>
             {GENDERS.map((g) => (
               <option key={g.value} value={g.value}>
                 {g.label}
@@ -100,10 +102,10 @@ export default function PreferencesForm() {
           <select
             value={occasion}
             onChange={(e) => setOccasion(e.target.value)}
-            className="w-full rounded-md border-gray-300 border-2 p-1 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="w-full rounded-md border-gray-300 border-2 p-1 shadow-sm focus:border-[#B6BAAB] "
             required
           >
-            <option value="">Select occasion</option>
+            <option value="">Select Occasion</option>
             {OCCASIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -119,10 +121,10 @@ export default function PreferencesForm() {
           <select
             value={footwear}
             onChange={(e) => setFootwear(e.target.value)}
-            className="w-full rounded-md border-gray-300 border-2 p-1 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="w-full rounded-md border-gray-300 border-2 p-1 shadow-sm focus:border-[#B6BAAB]"
             required
           >
-            <option value="">Select footwear</option>
+            <option value="">Select Footwear</option>
             {FOOTWEAR_OPTIONS.map((f) => (
               <option key={f.value} value={f.value}>
                 {f.label}
@@ -133,9 +135,9 @@ export default function PreferencesForm() {
 
         <button
           type="submit"
-          className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="w-full px-4 py-2 text-sm font-medium text-white bg-green-800 rounded-md hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-offset-2"
         >
-          Save Preferences
+          Generate Recommendations
         </button>
       </form>
     </div>

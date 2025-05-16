@@ -1,7 +1,7 @@
 // src/components/OutfitOption.tsx
-import React from 'react';
-import Image from 'next/image';
-import { OutfitItem } from '../types';
+import React from "react";
+import Image from "next/image";
+import { OutfitItem } from "../types";
 
 interface OutfitOptionProps {
   item: OutfitItem;
@@ -9,21 +9,21 @@ interface OutfitOptionProps {
   onSwitch: (newItem: OutfitItem) => void;
 }
 
-const OutfitOption: React.FC<OutfitOptionProps> = ({ 
-  item, 
-  alternativeItems, 
-  onSwitch 
+const OutfitOption: React.FC<OutfitOptionProps> = ({
+  item,
+  alternativeItems,
+  onSwitch,
 }) => {
   // Find current index of the item in alternatives
-  const currentIndex = alternativeItems.findIndex(alt => alt.id === item.id);
-  
+  const currentIndex = alternativeItems.findIndex((alt) => alt.id === item.id);
+
   const handleSwitch = () => {
     // If we can't find the current item in alternatives, just use the first alternative
     if (currentIndex === -1 && alternativeItems.length > 0) {
       onSwitch(alternativeItems[0]);
       return;
     }
-    
+
     // Get the next item in rotation
     const nextIndex = (currentIndex + 1) % alternativeItems.length;
     onSwitch(alternativeItems[nextIndex]);
@@ -40,8 +40,10 @@ const OutfitOption: React.FC<OutfitOptionProps> = ({
         />
       </div>
       <div className="text-center">
-        <p className="font-semibold text-sm md:text-base">${item.price.toFixed(2)}</p>
-        <button 
+        <p className="font-semibold text-sm md:text-base">
+          ${item.price.toFixed(2)}
+        </p>
+        <button
           onClick={handleSwitch}
           className="mt-1 px-4 py-1 bg-gray-200 text-xs md:text-sm rounded-md hover:bg-gray-300 transition-colors"
         >

@@ -25,6 +25,7 @@ interface AuthContextType {
     occasion: string,
     footwear: string
   ) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -189,6 +190,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshUser = async () => {
+    if (token) {
+      await fetchUserData(token);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -200,6 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         googleLogin,
         logout,
         updatePreferences,
+        refreshUser,
       }}
     >
       {children}

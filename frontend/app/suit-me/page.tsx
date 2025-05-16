@@ -8,6 +8,7 @@ import { ProcessedFrame } from "../types";
 import { analyzeSkinToneUpload } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function SuitMe() {
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
@@ -17,7 +18,8 @@ export default function SuitMe() {
   const [skinToneAnalysis, setSkinToneAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  const { token } = useAuth();
+  const { token, refreshUser } = useAuth();
+  const router = useRouter();
 
   const handleFrameProcessed = useCallback((frame: ProcessedFrame) => {
     setProcessedFrame(frame);
@@ -78,6 +80,11 @@ export default function SuitMe() {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleNext = async () => {
+    await refreshUser();
+    router.push("/preference-form");
   };
 
   return (
@@ -151,18 +158,17 @@ export default function SuitMe() {
               analysisResult={skinToneAnalysis}
               isLoading={isAnalyzing}
             />
-            {/* Show Next button if skin tone analysis is done and successful */}
             {skinToneAnalysis &&
               skinToneAnalysis.faces &&
               skinToneAnalysis.faces[0]?.skin_tone &&
               !isAnalyzing && (
                 <div className="mt-6 flex justify-end">
-                  <Link
-                    href="/preference-form"
+                  <button
+                    onClick={handleNext}
                     className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-semibold shadow"
                   >
                     Next
-                  </Link>
+                  </button>
                 </div>
               )}
           </div>

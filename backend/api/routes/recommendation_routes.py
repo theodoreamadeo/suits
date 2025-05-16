@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 import pandas as pd
 import random
 import os
+import traceback
 
 # Use APIRouter instead of FastAPI for route modules
 router = APIRouter()
@@ -33,18 +34,18 @@ class RecommendationResponse(BaseModel):
     outfits: List[Outfit]
 
 # Data loading
-data_path = "C:\EID\suits\data\fashion-dataset\styles.csv"
-image_path = "C:\EID\suits\data\fashion-dataset\images.csv"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+data_path = os.path.join(BASE_DIR, "data", "fashion-dataset", "styles.csv")
+image_path = os.path.join(BASE_DIR, "data", "fashion-dataset", "images.csv")
 
 # Load data on module initialization
 try:
     data = pd.read_csv(data_path, on_bad_lines="skip")
     images = pd.read_csv(image_path, on_bad_lines="skip")
     data = data.dropna(subset=["baseColour", "season", "usage", "productDisplayName"])
+    print(f"[DEBUG] Data loaded: {len(data)} rows, Images loaded: {len(images)} rows")
 except Exception as e:
-    # Log the error but allow the app to start
-    # The routes will raise appropriate errors when accessed
-    print(f"Error loading data: {e}")
+    print(f"[ERROR] Failed to load data: {e}")
     data = None
     images = None
 
@@ -187,8 +188,8 @@ def get_image_url(item_id):
     try:
         item_image = images[images['filename'] == f"{item_id}.jpg"].iloc[0]
         return item_image.link
-    except:
-        # Return a placeholder if image not found
+    except Exception as e:
+        print(f"[DEBUG] Image not found for {item_id}: {e}")
         return "https://via.placeholder.com/200"
 
 def generate_price():
@@ -199,51 +200,46 @@ def generate_price():
 async def recommend_outfits(request: RecommendationRequest):
     try:
         if data is None or images is None:
-            raise HTTPException(status_code=500, detail="Data not loaded properly. Check server logs.")
-            
-        # Get recommended colors based on skin tone
+            print(f"[DEBUG] Data or images not loaded. data is None: {data is None}, images is None: {images is None}")
+            raise HTTPException(status_code=500, detail="Data not loaded properly. Check server logs2.")
+
+        print(f"[DEBUG] Received request: {request}")
         recommended_colors = SKIN_TONE_COLOR_MAPPING.get(request.skin_tone_hex, [])
         if not recommended_colors:
-            recommended_colors = SKIN_TONE_COLOR_MAPPING["#422811"]  # Default if tone not found
-        
-        # Filter items based on gender and recommended colors
+            recommended_colors = SKIN_TONE_COLOR_MAPPING["#422811"]
+        print(f"[DEBUG] Recommended colors: {recommended_colors}")
+
         filtered_data = data[data['gender'] == request.gender]
         filtered_data = filtered_data[filtered_data['baseColour'].isin(recommended_colors)]
-        
-        # Filter by category and usage
+        print(f"[DEBUG] Filtered data by gender and color: {len(filtered_data)} rows")
+
         topwear = filtered_data[filtered_data['subCategory'] == 'Topwear']
         topwear = topwear[topwear['usage'].isin(request.usage)]
-        
+        print(f"[DEBUG] Topwear count: {len(topwear)}")
+
         bottomwear = filtered_data[filtered_data['subCategory'] == 'Bottomwear']
         bottomwear = bottomwear[bottomwear['usage'].isin(request.usage)]
-        
+        print(f"[DEBUG] Bottomwear count: {len(bottomwear)}")
+
         footwear = filtered_data[filtered_data['masterCategory'] == 'Footwear']
-        
-        # Further filter footwear if preference provided
         if request.footwear_preference and request.footwear_preference != "Any":
             footwear = footwear[footwear['articleType'] == request.footwear_preference]
-        
-        # Generate outfit combinations
-        outfit_combinations = []
-        outfit_id = 1
-        
-        # Ensure we have items in each category
+        print(f"[DEBUG] Footwear count: {len(footwear)}")
+
         if len(topwear) < 1 or len(bottomwear) < 1 or len(footwear) < 1:
+            print(f"[DEBUG] Not enough items: topwear={len(topwear)}, bottomwear={len(bottomwear)}, footwear={len(footwear)}")
             raise HTTPException(status_code=404, detail="Not enough items found for the specified criteria")
-        
-        # Get sample of items (up to 10 of each)
+
         top_samples = topwear.sample(min(10, len(topwear)))
         bottom_samples = bottomwear.sample(min(10, len(bottomwear)))
         foot_samples = footwear.sample(min(10, len(footwear)))
-        
-        # Generate up to 10 unique combinations
+
         combinations = []
+        outfit_id = 1
         for _ in range(10):
             top = top_samples.sample(1).iloc[0]
             bottom = bottom_samples.sample(1).iloc[0]
             foot = foot_samples.sample(1).iloc[0]
-            
-            # Create outfit
             outfit = Outfit(
                 id=outfit_id,
                 topwear=OutfitItem(
@@ -271,13 +267,15 @@ async def recommend_outfits(request: RecommendationRequest):
                     price=generate_price()
                 )
             )
-            
             combinations.append(outfit)
             outfit_id += 1
-        
+        print(f"[DEBUG] Returning {len(combinations)} outfit combinations")
         return RecommendationResponse(outfits=combinations)
-    
     except Exception as e:
+        print("[ERROR] Exception in recommend_outfits:")
+        traceback.print_exc()
+        if data is None or images is None:
+            raise HTTPException(status_code=500, detail="Data not loaded properly. Check server logs.")
         raise HTTPException(status_code=500, detail=f"Error generating recommendations: {str(e)}")
 
 # For mock data testing

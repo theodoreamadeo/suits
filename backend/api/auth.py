@@ -158,6 +158,7 @@ async def get_user_preferences(current_user: User = Depends(get_current_user), d
         {
             "gender": pref.gender.value if pref.gender else None,
             "occasion": pref.occasion.value if pref.occasion else None,
+            "footwear": pref.footwear.value if pref.footwear else None,
             "weight": getattr(pref, "weight", None),
             "height": getattr(pref, "height", None),
             "skin_tone": getattr(pref, "skin_tone", None),

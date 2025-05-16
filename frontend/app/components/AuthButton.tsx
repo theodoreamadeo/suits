@@ -68,7 +68,7 @@ export default function AuthButton() {
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        className="px-4 py-2 text-sm font-medium text-white bg-green-900 rounded-md hover:bg-green-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-800"
       >
         Login / Register
       </button>
@@ -122,8 +122,9 @@ export default function AuthButton() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 border-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
+                  placeholder="Enter your email"
                 />
               </div>
 
@@ -135,14 +136,15 @@ export default function AuthButton() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 border-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
+                  placeholder="Enter your password"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-green-800 rounded-md hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-offset-2"
               >
                 {isLogin ? "Login" : "Register"}
               </button>
@@ -151,7 +153,7 @@ export default function AuthButton() {
             <div className="mt-4 text-center">
               <button
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-[#B6BAAB] hover:text-[#B6BAAC]"
               >
                 {isLogin
                   ? "Don't have an account? Register"
