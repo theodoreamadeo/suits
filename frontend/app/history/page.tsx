@@ -41,20 +41,6 @@ export default function HistoryPage() {
     }
   }, [user, token]);
 
-  // Handle row click to navigate to recommendation page with preference data
-  const handleRowClick = (preference: any) => {
-    // Store the selected preference in sessionStorage to pass it to the recommendation page
-    sessionStorage.setItem('selectedPreference', JSON.stringify({
-      gender: preference.gender,
-      occasion: preference.occasion,
-      footwear: preference.footwear,
-      skin_tone: user?.skin_tone
-    }));
-    
-    // Navigate to the recommendation page
-    router.push('/recommendation-system');
-  };
-
   if (!user) {
     return (
       <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md mt-10 text-center">
@@ -95,11 +81,9 @@ export default function HistoryPage() {
                 <tr
                   key={idx}
                   className={
-                    `transition-colors duration-200 text-gray-800 cursor-pointer ` +
-                    (idx % 2 === 0 ? "bg-gray-50" : "bg-white") +
-                    " hover:bg-[#edeedd89]"
+                    `transition-colors duration-200 text-gray-800 ` +
+                    (idx % 2 === 0 ? "bg-gray-50" : "bg-white")
                   }
-                  onClick={() => handleRowClick(pref)}
                 >
                   <td className="px-6 py-3 font-mono text-[#747b6e] font-bold">
                     {preferences.length - idx}
