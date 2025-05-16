@@ -18,3 +18,4 @@ psycopg2-binary>=2.9.9
 google-auth>=2.27.0
 google-auth-oauthlib>=1.2.0
 requests>=2.31.0
+pyserial>=3.5

@@ -52,7 +52,7 @@ class UserPreferences(Base):
     user = relationship("User", back_populates="preferences")
 
 # Database URL will be set in environment variables
-DATABASE_URL = "postgresql://postgres:postgres@localhost/suits_db"
+DATABASE_URL = "postgresql://postgres:Gedangan24012006@localhost/suits_db"
 
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(bind=engine) 
