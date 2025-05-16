@@ -50,13 +50,13 @@ export default function AuthButton() {
       <div className="flex items-center gap-4">
         <a
           href="/history"
-          className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          className="px-4 py-2 text-sm font-medium text-white bg-[#94988a] rounded-md hover:bg-[#50524b] focus:outline-none focus:ring-2 focus:ring-offset-2"
         >
           History
         </a>
         <button
           onClick={handleLogout}
-          className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          className="px-4 py-2 text-sm font-medium text-white bg-[#c82f2f] rounded-md hover:bg-[#793e3e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
         >
           Logout
         </button>
@@ -68,7 +68,7 @@ export default function AuthButton() {
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className="px-4 py-2 text-sm font-medium text-white bg-green-900 rounded-md hover:bg-green-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-800"
+        className="px-4 py-2 text-sm font-medium text-white bg-[#90977a] rounded-md hover:bg-green-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-800"
       >
         Login / Register
       </button>

@@ -135,7 +135,7 @@ export default function PreferencesForm() {
 
         <button
           type="submit"
-          className="w-full px-4 py-2 text-sm font-medium text-white bg-green-800 rounded-md hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-offset-2"
+          className="w-full px-4 py-2 text-sm font-medium text-white bg-[#90977a] rounded-md hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-offset-2"
         >
           Generate Recommendations
         </button>

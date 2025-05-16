@@ -52,7 +52,7 @@ export default function HistoryPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-8 bg-white rounded-2xl shadow-2xl mt-12 border border-gray-200 mb-10">
-      <h2 className="text-3xl font-extrabold mb-8 text-center text-blue-700 tracking-tight drop-shadow">
+      <h2 className="text-3xl font-extrabold mb-8 text-center text-[#455141] tracking-tight drop-shadow">
         Your Preferences History
       </h2>
       {loading && <p>Loading...</p>}
@@ -61,7 +61,7 @@ export default function HistoryPage() {
         <div className="overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-y-2">
             <thead>
-              <tr className="bg-blue-100 text-blue-900">
+              <tr className="bg-[#dadcc3bf] text-[#455141]">
                 <th className="px-6 py-3 rounded-tl-xl text-left font-semibold">
                   #
                 </th>
@@ -81,10 +81,10 @@ export default function HistoryPage() {
                   className={
                     `transition-colors duration-200 text-gray-800 ` +
                     (idx % 2 === 0 ? "bg-gray-50" : "bg-white") +
-                    " hover:bg-blue-50"
+                    " hover:bg-[#edeedd89]"
                   }
                 >
-                  <td className="px-6 py-3 font-mono text-blue-700 font-bold">
+                  <td className="px-6 py-3 font-mono text-[#747b6e] font-bold">
                     {preferences.length - idx}
                   </td>
                   <td className="px-6 py-3">{user.email || "-"}</td>

@@ -1,14 +1,9 @@
 "use client";
 // src/app/page.tsx
 import React, { useEffect, useState } from "react";
-import OutfitRecommendations from "../components/OutfitRecommendations";
-import {
-  RecommendationRequest,
-  RecommendationResponse,
-  Outfit,
-} from "../types";
 import { getOutfitRecommendations } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { ArrowBigRightDash } from "lucide-react";
 
 function toCamelCase(str: string) {
   return str
@@ -48,7 +43,6 @@ export default function RecommendationSystem() {
           return;
         }
         const latest = prefs[0];
-        // NOTE: The recommendation API now uses GET with query parameters
         const preferences = {
           skin_tone_hex: user.skin_tone || "",
           gender: latest.gender === "male" ? "Men" : "Women",
@@ -72,14 +66,6 @@ export default function RecommendationSystem() {
     fetchLatestPreferenceAndRecommend();
   }, [token, user]);
 
-  const handleSwitch = (type: string, item: any) => {
-    if (!selectedOutfit) return;
-    setSelectedOutfit({
-      ...selectedOutfit,
-      [type]: item,
-    });
-  };
-
   // Calculate total price for selected outfit
   const totalPrice = selectedOutfit
     ? (selectedOutfit.topwear?.price || 0) +
@@ -101,27 +87,26 @@ export default function RecommendationSystem() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 p-8 min-h-screen bg-gray-50">
-      {/* Left: Selected Outfit */}
-      <div className="flex flex-col items-center justify-center w-full md:w-1/3 bg-white rounded-xl shadow p-6 mb-8 md:mb-0 md:sticky md:top-8 h-fit">
+    <div className="flex flex-row gap-12 justify-center pl-12">
+      <div className="flex flex-col items-center justify-center w-1/5 ">
         {selectedOutfit ? (
           <>
             <img
               src={selectedOutfit.topwear.image_url}
               alt="Topwear"
-              className="w-40 h-40 object-contain mb-4"
+              className="w-50 h-50 object-contain mb-4"
             />
             <img
               src={selectedOutfit.bottomwear.image_url}
               alt="Bottomwear"
-              className="w-40 h-40 object-contain mb-4"
+              className="w-50 h-50 object-contain mb-4"
             />
             <img
               src={selectedOutfit.footwear.image_url}
               alt="Footwear"
-              className="w-40 h-40 object-contain"
+              className="w-50 h-50 object-contain"
             />
-            <div className="mt-6 text-lg font-bold text-blue-700">
+            <div className="mt-6 text-lg font-bold text-green-900">
               Total: ${totalPrice.toFixed(2)}
             </div>
           </>
@@ -130,8 +115,7 @@ export default function RecommendationSystem() {
         )}
       </div>
 
-      {/* Right: Outfit Options */}
-      <div className="flex-1 flex flex-col gap-8 max-h-[80vh] overflow-y-auto pr-2">
+      <div className="flex-1 flex flex-col gap-8 max-w-3xl max-h-[90vh] overflow-y-auto">
         {isLoading && <div className="text-center">Loading...</div>}
         {!isLoading &&
           recommendations &&
@@ -140,69 +124,49 @@ export default function RecommendationSystem() {
             <div
               key={outfit.id}
               className={
-                "bg-gray-100 rounded-xl p-6 flex flex-col gap-2 shadow transition-all " +
+                "bg-[#DDDED8] rounded-4xl p-6 flex flex-row items-center shadow w-3xl" +
                 (selectedOutfit &&
                 outfit.topwear.id === selectedOutfit.topwear.id &&
                 outfit.bottomwear.id === selectedOutfit.bottomwear.id &&
                 outfit.footwear.id === selectedOutfit.footwear.id
-                  ? "border-4 border-blue-500 bg-blue-50"
+                  ? " border-4 border-[#B6BAAB]"
                   : "")
               }
+              onClick={() => {
+                setSelectedOutfit(outfit);
+              }}
             >
-              <div className="font-bold mb-2">OPTION {idx + 1}</div>
+              <div className="font-bold text-lg mr-8">OPTION {idx + 1}</div>
               <div className="flex items-end gap-8">
-                {/* Topwear */}
                 <div className="flex flex-col items-center">
                   <img
                     src={outfit.topwear.image_url}
                     alt="Topwear"
-                    className="w-20 h-20 object-contain mb-2"
+                    className="w-40 h-40 object-contain mb-2"
                   />
-                  <div className="text-sm font-semibold">
+                  <div className="text-sm font-bold">
                     ${outfit.topwear.price.toFixed(2)}
                   </div>
-                  {/* <button
-                    className="bg-gray-300 rounded px-4 py-1 mt-1"
-                    onClick={() => handleSwitch("topwear", outfit.topwear)}
-                  >
-                    switch
-                  </button> */}
                 </div>
-                {/* Bottomwear */}
                 <div className="flex flex-col items-center">
                   <img
                     src={outfit.bottomwear.image_url}
                     alt="Bottomwear"
-                    className="w-20 h-20 object-contain mb-2"
+                    className="w-40 h-40 object-contain mb-2"
                   />
-                  <div className="text-sm font-semibold">
+                  <div className="text-sm font-bold">
                     ${outfit.bottomwear.price.toFixed(2)}
                   </div>
-                  {/* <button
-                    className="bg-gray-300 rounded px-4 py-1 mt-1"
-                    onClick={() =>
-                      handleSwitch("bottomwear", outfit.bottomwear)
-                    }
-                  >
-                    switch
-                  </button> */}
                 </div>
-                {/* Footwear */}
                 <div className="flex flex-col items-center">
                   <img
                     src={outfit.footwear.image_url}
                     alt="Footwear"
-                    className="w-20 h-20 object-contain mb-2"
+                    className="w-40 h-40 object-contain mb-2"
                   />
-                  <div className="text-sm font-semibold">
+                  <div className="text-sm font-bold">
                     ${outfit.footwear.price.toFixed(2)}
                   </div>
-                  {/* <button
-                    className="bg-gray-300 rounded px-4 py-1 mt-1"
-                    onClick={() => handleSwitch("footwear", outfit.footwear)}
-                  >
-                    switch
-                  </button> */}
                 </div>
               </div>
             </div>
@@ -212,6 +176,15 @@ export default function RecommendationSystem() {
             No recommendations found.
           </div>
         )}
+      </div>
+      <div className="flex flex-col items-center justify-center ml-15 ">
+        <ArrowBigRightDash
+          width={150}
+          height={150}
+          color="#90977a"
+          className="hover:scale-105"
+        />
+        <p className="text-xs font-bold">Click here to confirm the option!</p>
       </div>
     </div>
   );
